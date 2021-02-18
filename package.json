@@ -1,0 +1,22 @@
+{
+  "name": "bank-puzzle",
+  "version": "0.1.0",
+  "description": "Bank hacking challenge / puzzle",
+  "main": "index.js",
+  "scripts": {
+    "watch": "tsc -b . ; tsc -b . -w --preserveWatchOutput & webpack --config webpack.config.js --mode development --watch & wait",
+    "build": "tsc -b . && webpack --config webpack.config.js --mode development",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "grainjs": "^1.0.1"
+  },
+  "devDependencies": {
+    "source-map-loader": "^2.0.1",
+    "typescript": "^4.1.5",
+    "webpack": "^5.22.0",
+    "webpack-cli": "^4.5.0"
+  }
+}
