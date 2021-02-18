@@ -11,7 +11,8 @@
   "author": "",
   "license": "Apache-2.0",
   "dependencies": {
-    "grainjs": "^1.0.1"
+    "grainjs": "^1.0.1",
+    "highlight.js": "^10.6.0"
   },
   "devDependencies": {
     "source-map-loader": "^2.0.1",

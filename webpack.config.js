@@ -8,6 +8,7 @@ module.exports = (env, argv) => {
     mode: argv.mode,
     entry: {
       index: "./build/app/index.js",
+      bankPage: "./build/app/bankPage.js",
     },
     output: {
       filename: "[name].js",

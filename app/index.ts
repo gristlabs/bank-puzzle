@@ -1,8 +1,39 @@
-import {dom, styled} from 'grainjs';
+import {dom, Observable, styled} from 'grainjs';
+import * as hljs from 'highlight.js';
 
 const accountIds = ['A', 'B', 'C'];
 
 function buildPageDom() {
+  let fromSelect: HTMLSelectElement;
+  let toSelect: HTMLSelectElement;
+  let amountInput: HTMLInputElement;
+  let bankIframe: HTMLIFrameElement;
+  const error = Observable.create(null, "");
+
+  async function fetchServerCode() {
+    try {
+      const response = await fetch('./bank.ts');
+      const code = await response.text();
+      return hljs.highlight('typescript', code).value;
+    } catch (e) {
+      error.set(e.message);
+      return '';
+    }
+  }
+
+  async function transfer(accFrom: string, accTo: string, amount: number) {
+    error.set('');
+    try {
+      await (bankIframe.contentWindow as any).bank.transfer(accFrom, accTo, amount);
+    } catch (e) {
+      error.set(e.message);
+    }
+  }
+  async function reset() {
+    error.set('');
+    await (bankIframe.contentWindow as any).bank.initialize();
+  }
+
   return cssPage(
     cssClient(
       cssIntro(
@@ -17,31 +48,41 @@ function buildPageDom() {
           'Good luck!',
         ),
       ),
-      cssToolbar(
-        'Transfer from',
-        cssSelect(accountIds.map((accId) => dom('option', {value: accId}, accId))),
-        'to',
-        cssSelect(accountIds.map((accId) => dom('option', {value: accId}, accId))),
-        cssButton('Transfer'),
+      dom('form',
+        dom.on('submit', (ev) => {
+          ev.preventDefault();
+          transfer(fromSelect.value, toSelect.value, parseFloat(amountInput.value));
+        }),
+        cssToolbar(
+          'Transfer from',
+          fromSelect = cssSelect(accountIds.map((accId) =>
+            dom('option', {value: accId, selected: accId === 'A'}, accId))
+          ),
+          'to',
+          toSelect = cssSelect(accountIds.map((accId) =>
+            dom('option', {value: accId, selected: accId === 'B'}, accId))
+          ),
+          dom('span', '$',
+            amountInput = cssInput({type: 'text', placeholder: 'Amount'})
+          ),
+          cssButton('Transfer'),
+          cssButton('Reset', dom.on('click', (ev) => { ev.preventDefault(); reset(); })),
+        ),
+        cssError(dom.text(error)),
       ),
-      cssIntro(
+      cssHeader(
         dom('b', 'Client code'), ' (for you to write)'
       ),
-      cssSource(
-        '...'
-      ),
+      cssSource('...'),
     ),
     cssServer(
       cssToolbar(
-        'Balances:',
-        accountIds.map((accId) => cssBalance(cssAccountId(accId), cssAccountBalance('???'))),
+        bankIframe = cssIframe({src: './bankPage.html'}),
       ),
-      cssIntro(
+      cssHeader(
         dom('b', 'Server code'), ' (contains a problem)'
       ),
-      cssSource(
-        '...'
-      ),
+      cssSource((elem) => { fetchServerCode().then(code => { elem.innerHTML = code; }); }),
     ),
   );
 }
@@ -59,13 +100,17 @@ const cssPage = styled('div', `
 
 const cssClient = styled('div', `
   flex: 1 0 0px;
+  min-width: 0px;
   padding: 20px;
   border-right: 1px solid lightgrey;
 `);
 
 const cssServer = styled('div', `
   flex: 1 0 0px;
+  min-width: 0px;
   padding: 20px;
+  display: flex;
+  flex-direction: column;
 `);
 
 const cssIntro = styled('div', `
@@ -75,49 +120,70 @@ const cssIntro = styled('div', `
   }
 `);
 
+const cssHeader = styled('div', `
+  margin-top: 20px;
+`);
+
 const cssToolbar = styled('div', `
   display: flex;
-  margin-bottom: 20px;
-  gap: 20px;
+  flex-wrap: wrap;
+  gap: 15px;
   align-items: center;
   border: 1px solid lightgrey;
   border-radius: 6px;
   padding: 10px 20px;
+  white-space: nowrap;
 `);
 
 const cssSelect = styled('select', `
-  padding: 4px 10px;
+  padding: 4px;
 `);
 
-const cssButton = styled('div', `
+const cssInput = styled('input', `
+  padding: 4px;
+  border: 1px solid lightgrey;
+  border-radius: 6px;
+  font-size: inherit;
+  width: 4em;
+  margin-left: 4px;
+`);
+
+const cssButton = styled('button', `
+  appearance: none;
+  border: none;
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: inherit;
   background-color: #7ab6ca;
   color: white;
   padding: 6px 10px;
   border-radius: 4px;
+  &:hover {
+    background-color: #65a2b7;
+  }
+  &:active {
+    background-color: #4a8093;
+  }
 `);
 
-const cssBalance = styled('div', `
-  margin: 0 10px;
-  border: 1px solid grey;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
+const cssError = styled('div', `
+  color: red;
+  margin: 6px 20px;
 `);
 
-const cssAccountId = styled('div', `
-  padding: 6px 10px;
-  background-color: grey;
-  color: white;
-`);
-
-const cssAccountBalance = styled('div', `
-  padding: 4px 8px;
+const cssIframe = styled('iframe', `
+  border: none;
+  height: 30px;
+  width: 100%;
 `);
 
 const cssSource = styled('pre', `
   border: 1px solid #7ab6ca;
   border-radius: 6px;
   padding: 10px;
+  margin: 10px 0 0 0;
+  font-size: 13px;
+  overflow: auto;
 `);
 
 dom.update(document.body, buildPageDom());
