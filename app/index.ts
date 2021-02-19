@@ -1,20 +1,29 @@
 import {dom, Observable, styled} from 'grainjs';
-import * as hljs from 'highlight.js';
+import * as CodeMirror from 'codemirror';
+import 'codemirror/mode/javascript/javascript.js'
 
 const accountIds = ['A', 'B', 'C'];
+
+const sampleClientCode = `// You may use transfer(accFrom, accTo, amount) and getBalance(acc).
+await transfer('A', 'B', 200);
+await transfer('B', 'C', 200);
+console.log("A=", await getBalance('A'),
+            "B=", await getBalance('B'),
+            "C=", await getBalance('C'));
+`;
 
 function buildPageDom() {
   let fromSelect: HTMLSelectElement;
   let toSelect: HTMLSelectElement;
   let amountInput: HTMLInputElement;
   let bankIframe: HTMLIFrameElement;
+  let codeMirror: CodeMirror.Editor;
   const error = Observable.create(null, "");
 
   async function fetchServerCode() {
     try {
       const response = await fetch('./bank.ts');
-      const code = await response.text();
-      return hljs.highlight('typescript', code).value;
+      return await response.text();
     } catch (e) {
       error.set(e.message);
       return '';
@@ -32,6 +41,20 @@ function buildPageDom() {
   async function reset() {
     error.set('');
     await (bankIframe.contentWindow as any).bank.initialize();
+  }
+
+  async function runJsCode() {
+    try {
+      const code = codeMirror.getValue();
+      const {transfer, getBalance} = (bankIframe.contentWindow as any).bank;
+      const userFunc = Function('transfer', 'getBalance',
+                                `return async function() { ${code} }`)(transfer, getBalance);
+      await reset();
+      await userFunc();
+    } catch (e) {
+      console.warn("Error", e);
+      error.set(e.message);
+    }
   }
 
   return cssPage(
@@ -71,9 +94,19 @@ function buildPageDom() {
         cssError(dom.text(error)),
       ),
       cssHeader(
-        dom('b', 'Client code'), ' (for you to write)'
+        dom('b', 'Client code'), ' (for you to write)',
+        cssJsRun(cssButton('Reset & Run', dom.on('click', runJsCode))),
       ),
-      cssSource('...'),
+      cssSource((elem) => {
+        setTimeout(() => {
+          codeMirror = CodeMirror(elem, {
+            value: sampleClientCode,
+            viewportMargin: Infinity,
+            mode:  "text/javascript",
+            theme: 'default',
+          });
+        }, 0);
+      }),
     ),
     cssServer(
       cssToolbar(
@@ -82,7 +115,16 @@ function buildPageDom() {
       cssHeader(
         dom('b', 'Server code'), ' (contains a problem)'
       ),
-      cssSource((elem) => { fetchServerCode().then(code => { elem.innerHTML = code; }); }),
+      cssSource((elem) => {
+        fetchServerCode().then(value =>
+          CodeMirror(elem, {
+            value,
+            readOnly: true,
+            viewportMargin: Infinity,
+            mode: "text/typescript",
+            theme: 'default',
+          }));
+      }),
     ),
   );
 }
@@ -103,6 +145,8 @@ const cssClient = styled('div', `
   min-width: 0px;
   padding: 20px;
   border-right: 1px solid lightgrey;
+  display: flex;
+  flex-direction: column;
 `);
 
 const cssServer = styled('div', `
@@ -184,6 +228,12 @@ const cssSource = styled('pre', `
   margin: 10px 0 0 0;
   font-size: 13px;
   overflow: auto;
+  flex: auto;
+`);
+
+const cssJsRun = styled('div', `
+  float: right;
+  margin-top: -6px;
 `);
 
 dom.update(document.body, buildPageDom());

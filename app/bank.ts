@@ -39,19 +39,14 @@ export async function transfer(
     throw new Error(`Insufficient balance`);
   }
 
-  // For larger amounts, run some extra checks.
-  if (amount > 1000) {
-    await moneyLaunderingCheck(accFrom, accTo, amount);
-  }
+  await moneyLaunderingCheck(amount);
 
   bankBalances.set(accFrom, balanceFrom - amount);
   bankBalances.set(accTo, balanceTo + amount);
 }
 
-// Pretend to run some extra checks for large transfers. These are
-// quite fast, taking around 100ms, and happen to always pass.
-export async function moneyLaunderingCheck(
-  accFrom: AccountId, accTo: AccountId, amount: number
-) {
+// Pretend to run some extra checks. These are quite fast, taking
+// around 100ms, and happen to always pass.
+export async function moneyLaunderingCheck(amount: number) {
   return new Promise(resolve => setTimeout(resolve, 100));
 }
