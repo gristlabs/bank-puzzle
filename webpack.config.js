@@ -13,7 +13,7 @@ module.exports = (env, argv) => {
     output: {
       filename: "[name].js",
       sourceMapFilename: "[file].map",
-      path: path.resolve("./static"),
+      path: path.resolve("./docs"),
     },
     devtool: "source-map",
     resolve: {

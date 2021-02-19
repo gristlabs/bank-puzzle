@@ -1,7 +1,5 @@
 /node_modules/
 /build/
-/static/*.js
-/static/*.js.map
 
 # Logs
 logs
