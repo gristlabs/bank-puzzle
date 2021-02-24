@@ -1,6 +1,6 @@
 import {Rpc} from 'grain-rpc';
 
-const rpc = new Rpc({sendMessage: postMessage as any});
+const rpc = new Rpc({logger: {}, sendMessage: postMessage as any});
 onmessage = (ev) => rpc.receiveMessage(ev.data);
 
 const bank = rpc.getStub<any>('bank');

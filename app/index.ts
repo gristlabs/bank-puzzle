@@ -50,7 +50,7 @@ function buildPageDom() {
 
   async function runJsCode() {
     worker = new Worker('/worker.js');
-    const rpc = new Rpc({sendMessage: worker.postMessage.bind(worker)});
+    const rpc = new Rpc({logger: {}, sendMessage: worker.postMessage.bind(worker)});
     worker.onmessage = (ev) => rpc.receiveMessage(ev.data);
     const {transfer, getBalance} = (bankIframe.contentWindow as any).bank;
     rpc.registerImpl('bank', {transfer, getBalance});
@@ -58,8 +58,9 @@ function buildPageDom() {
       isRunning.set(true);
       await reset();
       await rpc.callRemoteFunc('runUserCode', codeMirror.getValue());
-      if (sum(await Promise.all(accountIds.map(acc => getBalance(acc)))) >= 1.0e9) {
-        showInvitation();
+      const result = sum(await Promise.all(accountIds.map(acc => getBalance(acc))));
+      if (result >= 1.0e9) {
+        showInvitation(result, codeMirror.getValue());
       }
     } catch (e) {
       console.warn("Error", e);
@@ -149,8 +150,9 @@ function buildPageDom() {
   );
 }
 
-function showInvitation() {
-  const solnId = 'XXXX';
+function showInvitation(result: number, userCode: string) {
+  const solnId = randomId(12);
+  saveSolution(solnId, result, userCode).catch(err => console.warn('Error saving solution', err));
   const elem = cssModalBacker(cssModal(
     cssCloseBtn(dom.on('click', () => { dom.domDispose(elem); elem.remove(); })),
     dom('p', 'Congratulations!'),
@@ -158,15 +160,42 @@ function showInvitation() {
       dom('a', {href: positionUrl, target: '_blank'}, 'See position', cssLinkOutIcon())
     ),
     dom('p', 'To apply, email ', dom('a', {href: 'mailto:jobs@getgrist.com'}, 'jobs@getgrist.com'),
-      `, include "BankPuzzle-${solnId}" in the subject line, and attach your resume`,
-      ' (preferably as a PDF).'),
+      ', include "', dom('span', {style: 'color:blue'}, `BankPuzzle-${solnId}`), '" in the subject line, ',
+      'and attach your resume (preferably as a PDF).'),
     dom('p', 'We hope to hear from you!'),
   ));
   document.body.appendChild(elem);
 }
 
+async function saveSolution(solnId: string, result: number, userCode: string) {
+  const data = {
+    Ident: [solnId],
+    Result: [result],
+    Code: [userCode],
+    Timestamp: [Date.now()],
+  };
+  const options: RequestInit = {
+    method: 'POST',
+    body: JSON.stringify(data),
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+    },
+    credentials: 'omit',
+  };
+  const saveUrl = 'https://gristlabs.getgrist.com/api/docs/sCHieRK9TXrq54hHRwCE5L/tables/Solutions/data';
+  const resp = await window.fetch(saveUrl, options);
+  const body = await resp.json();
+  if (resp.status !== 200) { throw new Error("Could not submit the form: " + (body && body.error || "unknown error")); }
+  console.log(`Solution saved; use "BankPuzzle-${solnId}" to email jobs@getgrist.com`);
+}
+
 function sum(values: number[]): number {
   return values.reduce((sum, val) => sum + val, 0);
+}
+
+function randomId(length: number): string {
+  return Array.from(Array(length), () => Math.floor(Math.random() * 36).toString(36)).join('');
 }
 
 const cssPage = styled('div', `
@@ -294,7 +323,7 @@ const cssModal = styled('div', `
   background-color: white;
   box-shadow: 0 4px 12px 0 #333;
   border: 1px solid #666;
-  max-width: 440px;
+  max-width: 480px;
   margin: auto;
   font-family: sans-serif;
   font-size: 14px;
