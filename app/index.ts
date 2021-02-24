@@ -1,5 +1,6 @@
 import {dom, Observable, styled} from 'grainjs';
 import * as CodeMirror from 'codemirror';
+import {Rpc} from 'grain-rpc';
 import 'codemirror/mode/javascript/javascript.js'
 
 const accountIds = ['A', 'B', 'C'];
@@ -19,6 +20,8 @@ function buildPageDom() {
   let bankIframe: HTMLIFrameElement;
   let codeMirror: CodeMirror.Editor;
   const error = Observable.create(null, "");
+  const isRunning = Observable.create(null, false);
+  let worker: Worker|undefined;
 
   async function fetchServerCode() {
     try {
@@ -44,17 +47,29 @@ function buildPageDom() {
   }
 
   async function runJsCode() {
+    worker = new Worker('/worker.js');
+    const rpc = new Rpc({sendMessage: worker.postMessage.bind(worker)});
+    worker.onmessage = (ev) => rpc.receiveMessage(ev.data);
+    const {transfer, getBalance} = (bankIframe.contentWindow as any).bank;
+    rpc.registerImpl('bank', {transfer, getBalance});
     try {
-      const code = codeMirror.getValue();
-      const {transfer, getBalance} = (bankIframe.contentWindow as any).bank;
-      const userFunc = Function('transfer', 'getBalance',
-                                `return async function() { ${code} }`)(transfer, getBalance);
+      isRunning.set(true);
       await reset();
-      await userFunc();
+      await rpc.callRemoteFunc('runUserCode', codeMirror.getValue());
+      if (sum(await Promise.all(accountIds.map(acc => getBalance(acc)))) >= 1.0e9) {
+        alert("Hello world!");
+      }
     } catch (e) {
       console.warn("Error", e);
       error.set(e.message);
+    } finally {
+      stopJsCode();
     }
+  }
+
+  function stopJsCode() {
+    worker?.terminate();
+    isRunning.set(false);
   }
 
   return cssPage(
@@ -64,7 +79,8 @@ function buildPageDom() {
         dom('p', 'On the right, you see the source code for a server ',
           'that implements a simple bank. It has a subtle problem. ',
           'Your job is not to fix it, but to exploit it to grow the ',
-          'total balance accross the accounts from $3,000 to $1,000,000.'
+          'total balance accross the accounts from $3,000 to ',
+          '$1,000,000,000.'
         ),
         dom('p', 'On the left, you have the bank client. ',
           'You can use the buttons to transfer money, or write JS code. ',
@@ -95,7 +111,8 @@ function buildPageDom() {
       ),
       cssHeader(
         dom('b', 'Client code'), ' (for you to write)',
-        cssJsRun(cssButton('Reset & Run', dom.on('click', runJsCode))),
+        cssJsRun(dom.hide(isRunning), cssButton('Reset & Run', dom.on('click', runJsCode))),
+        cssJsRun(dom.show(isRunning), cssButton('Stop', dom.on('click', stopJsCode))),
       ),
       cssSource((elem) => {
         setTimeout(() => {
@@ -127,6 +144,10 @@ function buildPageDom() {
       }),
     ),
   );
+}
+
+function sum(values: number[]): number {
+  return values.reduce((sum, val) => sum + val, 0);
 }
 
 const cssPage = styled('div', `

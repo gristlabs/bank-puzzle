@@ -9,6 +9,7 @@ module.exports = (env, argv) => {
     entry: {
       index: "./build/app/index.js",
       bankPage: "./build/app/bankPage.js",
+      worker: "./build/app/worker.js",
     },
     output: {
       filename: "[name].js",

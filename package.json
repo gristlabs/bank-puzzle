@@ -12,6 +12,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "codemirror": "^5.59.2",
+    "grain-rpc": "^0.1.6",
     "grainjs": "^1.0.1"
   },
   "devDependencies": {
