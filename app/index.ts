@@ -3,6 +3,8 @@ import * as CodeMirror from 'codemirror';
 import {Rpc} from 'grain-rpc';
 import 'codemirror/mode/javascript/javascript.js'
 
+const positionUrl = 'https://angel.co/company/grist-labs/jobs/49428-software-engineer';
+
 const accountIds = ['A', 'B', 'C'];
 
 const sampleClientCode = `// You may use transfer(accFrom, accTo, amount) and getBalance(acc).
@@ -57,7 +59,7 @@ function buildPageDom() {
       await reset();
       await rpc.callRemoteFunc('runUserCode', codeMirror.getValue());
       if (sum(await Promise.all(accountIds.map(acc => getBalance(acc)))) >= 1.0e9) {
-        alert("Hello world!");
+        showInvitation();
       }
     } catch (e) {
       console.warn("Error", e);
@@ -117,11 +119,12 @@ function buildPageDom() {
       cssSource((elem) => {
         setTimeout(() => {
           codeMirror = CodeMirror(elem, {
-            value: sampleClientCode,
+            value: sessionStorage.getItem('user-code') || sampleClientCode,
             viewportMargin: Infinity,
             mode:  "text/javascript",
             theme: 'default',
           });
+          codeMirror.on('change', (inst, chg) => sessionStorage.setItem('user-code', inst.getValue()));
         }, 0);
       }),
     ),
@@ -144,6 +147,22 @@ function buildPageDom() {
       }),
     ),
   );
+}
+
+function showInvitation() {
+  const solnId = 'XXXX';
+  const elem = cssModalBacker(cssModal(
+    cssCloseBtn(dom.on('click', () => { dom.domDispose(elem); elem.remove(); })),
+    dom('p', 'Congratulations!'),
+    dom('p', 'We hope you enjoyed the puzzle. Please consider our Software Engineer position at Grist: ',
+      dom('a', {href: positionUrl, target: '_blank'}, 'See position', cssLinkOutIcon())
+    ),
+    dom('p', 'To apply, email ', dom('a', {href: 'mailto:jobs@getgrist.com'}, 'jobs@getgrist.com'),
+      `, include "BankPuzzle-${solnId}" in the subject line, and attach your resume`,
+      ' (preferably as a PDF).'),
+    dom('p', 'We hope to hear from you!'),
+  ));
+  document.body.appendChild(elem);
 }
 
 function sum(values: number[]): number {
@@ -255,6 +274,67 @@ const cssSource = styled('pre', `
 const cssJsRun = styled('div', `
   float: right;
   margin-top: -6px;
+`);
+
+const cssModalBacker = styled('div', `
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  background-color: rgba(0, 0, 0, 0.5);
+  overflow-y: auto;
+`);
+
+const cssModal = styled('div', `
+  position: relative;
+  background-color: white;
+  box-shadow: 0 4px 12px 0 #333;
+  border: 1px solid #666;
+  max-width: 440px;
+  margin: auto;
+  font-family: sans-serif;
+  font-size: 14px;
+  border-radius: 6px;
+  padding: 32px 40px;
+  line-height: 24px;
+`);
+
+const cssCloseBtn = styled('div', `
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  height: 24px;
+  width: 24px;
+  color: grey;
+  font-size: 24px;
+  text-align: center;
+  line-height: 27px;
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  &:hover {
+    background-color: lightgrey;
+  }
+  &::before {
+    content: "\\2715";
+  }
+`);
+
+const cssLinkOutIcon = styled('div', `
+  display: inline-block;
+  vertical-align: middle;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+  -webkit-mask-image: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEyLjI5Mjg5MzIsMyBMOC41LDMgQzguMjIzODU3NjMsMyA4LDIuNzc2MTQyMzcgOCwyLjUgQzgsMi4yMjM4NTc2MyA4LjIyMzg1NzYzLDIgOC41LDIgTDEzLjUsMiBDMTMuNzc2MTQyNCwyIDE0LDIuMjIzODU3NjMgMTQsMi41IEwxNCw3LjUgQzE0LDcuNzc2MTQyMzcgMTMuNzc2MTQyNCw4IDEzLjUsOCBDMTMuMjIzODU3Niw4IDEzLDcuNzc2MTQyMzcgMTMsNy41IEwxMywzLjcwNzEwNjc4IEw3Ljg1MzU1MzM5LDguODUzNTUzMzkgQzcuNjU4MjkxMjQsOS4wNDg4MTU1NCA3LjM0MTcwODc2LDkuMDQ4ODE1NTQgNy4xNDY0NDY2MSw4Ljg1MzU1MzM5IEM2Ljk1MTE4NDQ2LDguNjU4MjkxMjQgNi45NTExODQ0Niw4LjM0MTcwODc2IDcuMTQ2NDQ2NjEsOC4xNDY0NDY2MSBMMTIuMjkyODkzMiwzIFogTTExLDEwLjUgQzExLDEwLjIyMzg1NzYgMTEuMjIzODU3NiwxMCAxMS41LDEwIEMxMS43NzYxNDI0LDEwIDEyLDEwLjIyMzg1NzYgMTIsMTAuNSBMMTIsMTIuNSBDMTIsMTMuMzI4NDI3MSAxMS4zMjg0MjcxLDE0IDEwLjUsMTQgTDMuNSwxNCBDMi42NzE1NzI4OCwxNCAyLDEzLjMyODQyNzEgMiwxMi41IEwyLDUuNSBDMiw0LjY3MTU3Mjg4IDIuNjcxNTcyODgsNCAzLjUsNCBMNS41LDQgQzUuNzc2MTQyMzcsNCA2LDQuMjIzODU3NjMgNiw0LjUgQzYsNC43NzYxNDIzNyA1Ljc3NjE0MjM3LDUgNS41LDUgTDMuNSw1IEMzLjIyMzg1NzYzLDUgMyw1LjIyMzg1NzYzIDMsNS41IEwzLDEyLjUgQzMsMTIuNzc2MTQyNCAzLjIyMzg1NzYzLDEzIDMuNSwxMyBMMTAuNSwxMyBDMTAuNzc2MTQyNCwxMyAxMSwxMi43NzYxNDI0IDExLDEyLjUgTDExLDEwLjUgWiIgZmlsbD0iIzAwMCIgZmlsbC1ydWxlPSJub256ZXJvIi8+PC9zdmc+");
+  width: 16px;
+  height: 16px;
+  background-color: #666;
+  box-sizing: border-box;
 `);
 
 dom.update(document.body, buildPageDom());
