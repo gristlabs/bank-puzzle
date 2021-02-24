@@ -16583,7 +16583,7 @@ async function saveSolution(solnId, result, userCode) {
         Ident: [solnId],
         Result: [result],
         Code: [userCode],
-        Timestamp: [Date.now()],
+        Timestamp: [Date.now() / 1000],
     };
     const options = {
         method: 'POST',
