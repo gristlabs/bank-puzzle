@@ -172,7 +172,7 @@ async function saveSolution(solnId: string, result: number, userCode: string) {
     Ident: [solnId],
     Result: [result],
     Code: [userCode],
-    Timestamp: [Date.now()],
+    Timestamp: [Date.now() / 1000],
   };
   const options: RequestInit = {
     method: 'POST',
