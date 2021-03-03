@@ -48,11 +48,10 @@ const cssBody = styled('div', `
 
   display: flex;
   align-items: center;
-  gap: 20px;
 `);
 
 const cssBalance = styled('div', `
-  margin: 0 10px;
+  margin: 0 10px 0 auto;
   border: 1px solid grey;
   border-radius: 4px;
   display: flex;

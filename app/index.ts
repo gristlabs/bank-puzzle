@@ -6,6 +6,8 @@ import 'codemirror/mode/javascript/javascript.js'
 const positionUrl = 'https://angel.co/company/grist-labs/jobs/49428-software-engineer';
 
 const accountIds = ['A', 'B', 'C'];
+const startBalance = 3000;
+const goalBalance = 1.0e9;
 
 const sampleClientCode = `// You may use transfer(accFrom, accTo, amount) and getBalance(acc).
 await transfer('A', 'B', 200);
@@ -59,8 +61,12 @@ function buildPageDom() {
       await reset();
       await rpc.callRemoteFunc('runUserCode', codeMirror.getValue());
       const result = sum(await Promise.all(accountIds.map(acc => getBalance(acc))));
-      if (result >= 1.0e9) {
+      if (result === goalBalance) {
         showInvitation(result, codeMirror.getValue());
+      } else if (result > startBalance && result < goalBalance) {
+        error.set('You are on your way, but not there yet!');
+      } else if (result > goalBalance) {
+        error.set('Too much! Can you hit the goal exactly?');
       }
     } catch (e) {
       console.warn("Error", e);
@@ -83,7 +89,7 @@ function buildPageDom() {
           'that implements a simple bank. It has a subtle problem. ',
           'Your job is not to fix it, but to exploit it to grow the ',
           'total balance accross the accounts from $3,000 to ',
-          '$1,000,000,000.'
+          'exactly $1,000,000,000.'
         ),
         dom('p', 'On the left, you have the bank client. ',
           'You can use the buttons to transfer money, or write JS code. ',

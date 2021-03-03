@@ -6,6 +6,7 @@
   "scripts": {
     "watch": "tsc -b . ; tsc -b . -w --preserveWatchOutput & webpack --config webpack.config.js --mode development --watch & wait",
     "build": "tsc -b . && webpack --config webpack.config.js --mode development",
+    "start": "npm run watch & cd docs && python3 -m http.server 7777",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
