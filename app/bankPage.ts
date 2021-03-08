@@ -3,6 +3,7 @@ import * as bank from './bank';
 
 const accountIds = ['A', 'B', 'C'];
 const balanceObs = Observable.create(null, [0, 0, 0]);
+const numTransfers = Observable.create(null, 0);
 
 async function updateBalanceObs() {
   balanceObs.set(await Promise.all(accountIds.map(bank.getBalance)));
@@ -10,6 +11,7 @@ async function updateBalanceObs() {
 
 async function initialize() {
   try {
+    numTransfers.set(0);
     return await bank.initialize();
   } finally {
     await updateBalanceObs();
@@ -18,6 +20,7 @@ async function initialize() {
 
 async function transfer(accFrom: bank.AccountId, accTo: bank.AccountId, amount: number) {
   try {
+    numTransfers.set(numTransfers.get() + 1);
     return await bank.transfer(accFrom, accTo, amount);
   } finally {
     await updateBalanceObs();
@@ -29,7 +32,7 @@ function buildPageDom() {
   const fmt = new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD'});
   return [
     cssBody.cls(''),
-    'Balances:',
+    cssBalance(cssAccountBalance(dom.text(use => use(numTransfers) + ' transfers'))),
     accountIds.map((accId, i) =>
       cssBalance(cssAccountId(accId),
         cssAccountBalance(
@@ -48,15 +51,15 @@ const cssBody = styled('div', `
 
   display: flex;
   align-items: center;
-  gap: 20px;
 `);
 
 const cssBalance = styled('div', `
-  margin: 0 10px;
+  margin: 0 10px 0 auto;
   border: 1px solid grey;
   border-radius: 4px;
   display: flex;
   align-items: center;
+  white-space: nowrap;
 `);
 
 const cssAccountId = styled('div', `
@@ -70,4 +73,9 @@ const cssAccountBalance = styled('div', `
 `);
 
 dom.update(document.body, buildPageDom());
-(window as any).bank = {initialize, transfer, getBalance: bank.getBalance};
+(window as any).bank = {
+  initialize,
+  transfer,
+  getBalance: bank.getBalance,
+  getNumTransfers: () => numTransfers.get(),
+};
