@@ -46,7 +46,7 @@ export async function transfer(
 }
 
 // Pretend to run some extra checks. These are quite fast, taking
-// around 100ms, and happen to always pass.
+// around 100ms (plus or minus), and happen to always pass.
 export async function moneyLaunderingCheck(amount: number) {
-  return new Promise(resolve => setTimeout(resolve, 100));
+  return new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100));
 }
