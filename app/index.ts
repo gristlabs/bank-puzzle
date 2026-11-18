@@ -4,8 +4,6 @@ import {Rpc} from 'grain-rpc';
 import * as store from 'store';
 import 'codemirror/mode/javascript/javascript.js'
 
-const positionUrl = 'https://angel.co/company/grist-labs/jobs/49428-software-engineer';
-
 const accountIds = ['A', 'B', 'C'];
 const startBalance = 3000;
 const goalBalance = 3.0e9;
@@ -65,7 +63,7 @@ function buildPageDom() {
       const result = sum(await Promise.all(accountIds.map(acc => getBalance(acc))));
       const numTransfers = await getNumTransfers();
       if (result === goalBalance && numTransfers <= goalTransfers) {
-        showInvitation(result, codeMirror.getValue());
+        showCongratulations(result, codeMirror.getValue());
       } else if (result > startBalance && result < goalBalance) {
         error.set('You are on your way, but not there yet!');
       } else if (result > goalBalance) {
@@ -100,7 +98,7 @@ function buildPageDom() {
           'You can use the buttons to transfer money manually, then write JS code. ',
           'You may use functions ', dom('code', 'transfer(accFrom, accTo, amount)'),
           ' and ', dom('code', 'getBalance(acc)'),
-          '. Good luck!',
+          '. Please solve it yourself, without AI. Good luck!',
         ),
       ),
       dom('form',
@@ -166,19 +164,15 @@ function buildPageDom() {
   );
 }
 
-function showInvitation(result: number, userCode: string) {
+function showCongratulations(result: number, userCode: string) {
   const solnId = getNextSolutionId();
   saveSolution(solnId, result, userCode).catch(err => console.warn('Error saving solution', err));
   const elem = cssModalBacker(cssModal(
     cssCloseBtn(dom.on('click', () => { dom.domDispose(elem); elem.remove(); })),
     dom('p', 'Congratulations!'),
-    dom('p', 'We hope you enjoyed the puzzle. Please consider our Software Engineer position at Grist: ',
-      dom('a', {href: positionUrl, target: '_blank'}, 'See position', cssLinkOutIcon())
-    ),
-    dom('p', 'To apply, email ', dom('a', {href: 'mailto:jobs@getgrist.com'}, 'jobs@getgrist.com'),
-      ', include "', dom('span', {style: 'color:blue'}, `BankPuzzle-${solnId}`), '" in the subject line, ',
-      'and attach your resume (preferably as a PDF).'),
-    dom('p', 'We hope to hear from you!'),
+    dom('p', 'We hope you enjoyed the puzzle.'),
+    dom('p', 'Your solution code is ', dom('span', {style: 'color:blue'}, `BankPuzzle-${solnId}`),
+      '. Quote it in your application if you want to flex.'),
   ));
   document.body.appendChild(elem);
 }
@@ -203,7 +197,6 @@ async function saveSolution(solnId: string, result: number, userCode: string) {
   const resp = await window.fetch(saveUrl, options);
   const body = await resp.json();
   if (resp.status !== 200) { throw new Error("Could not submit the form: " + (body && body.error || "unknown error")); }
-  console.log(`Solution saved; use "BankPuzzle-${solnId}" to email jobs@getgrist.com`);
 }
 
 function sum(values: number[]): number {
@@ -374,19 +367,6 @@ const cssCloseBtn = styled('div', `
   &::before {
     content: "\\2715";
   }
-`);
-
-const cssLinkOutIcon = styled('div', `
-  display: inline-block;
-  vertical-align: middle;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  -webkit-mask-size: contain;
-  -webkit-mask-image: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEyLjI5Mjg5MzIsMyBMOC41LDMgQzguMjIzODU3NjMsMyA4LDIuNzc2MTQyMzcgOCwyLjUgQzgsMi4yMjM4NTc2MyA4LjIyMzg1NzYzLDIgOC41LDIgTDEzLjUsMiBDMTMuNzc2MTQyNCwyIDE0LDIuMjIzODU3NjMgMTQsMi41IEwxNCw3LjUgQzE0LDcuNzc2MTQyMzcgMTMuNzc2MTQyNCw4IDEzLjUsOCBDMTMuMjIzODU3Niw4IDEzLDcuNzc2MTQyMzcgMTMsNy41IEwxMywzLjcwNzEwNjc4IEw3Ljg1MzU1MzM5LDguODUzNTUzMzkgQzcuNjU4MjkxMjQsOS4wNDg4MTU1NCA3LjM0MTcwODc2LDkuMDQ4ODE1NTQgNy4xNDY0NDY2MSw4Ljg1MzU1MzM5IEM2Ljk1MTE4NDQ2LDguNjU4MjkxMjQgNi45NTExODQ0Niw4LjM0MTcwODc2IDcuMTQ2NDQ2NjEsOC4xNDY0NDY2MSBMMTIuMjkyODkzMiwzIFogTTExLDEwLjUgQzExLDEwLjIyMzg1NzYgMTEuMjIzODU3NiwxMCAxMS41LDEwIEMxMS43NzYxNDI0LDEwIDEyLDEwLjIyMzg1NzYgMTIsMTAuNSBMMTIsMTIuNSBDMTIsMTMuMzI4NDI3MSAxMS4zMjg0MjcxLDE0IDEwLjUsMTQgTDMuNSwxNCBDMi42NzE1NzI4OCwxNCAyLDEzLjMyODQyNzEgMiwxMi41IEwyLDUuNSBDMiw0LjY3MTU3Mjg4IDIuNjcxNTcyODgsNCAzLjUsNCBMNS41LDQgQzUuNzc2MTQyMzcsNCA2LDQuMjIzODU3NjMgNiw0LjUgQzYsNC43NzYxNDIzNyA1Ljc3NjE0MjM3LDUgNS41LDUgTDMuNSw1IEMzLjIyMzg1NzYzLDUgMyw1LjIyMzg1NzYzIDMsNS41IEwzLDEyLjUgQzMsMTIuNzc2MTQyNCAzLjIyMzg1NzYzLDEzIDMuNSwxMyBMMTAuNSwxMyBDMTAuNzc2MTQyNCwxMyAxMSwxMi43NzYxNDI0IDExLDEyLjUgTDExLDEwLjUgWiIgZmlsbD0iIzAwMCIgZmlsbC1ydWxlPSJub256ZXJvIi8+PC9zdmc+");
-  width: 16px;
-  height: 16px;
-  background-color: #666;
-  box-sizing: border-box;
 `);
 
 dom.update(document.body, buildPageDom());
